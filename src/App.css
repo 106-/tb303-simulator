@@ -1,0 +1,404 @@
+/* ── Base ──────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0c0c10;
+  --panel:       #15151e;
+  --border:      #2a2a3a;
+  --led-on:      #33ff66;
+  --led-off:     #073312;
+  --led-glow:    #33ff6666;
+  --accent-on:   #ff4400;
+  --accent-off:  #280900;
+  --slide-on:    #ffaa00;
+  --slide-off:   #281b00;
+  --lcd:         #000c00;
+  --lcd-text:    #00ff66;
+  --text:        #99aabb;
+  --text-dim:    #445566;
+  --playing-glow: #33ff6633;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px 16px;
+}
+
+/* ── App shell ─────────────────────────── */
+.app {
+  width: 100%;
+  max-width: 1200px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 40px #00000080;
+}
+
+.app-header {
+  background: #0a0a12;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+}
+
+.app-title {
+  font-size: 1.1rem;
+  letter-spacing: 0.3em;
+  color: var(--lcd-text);
+  text-shadow: 0 0 10px var(--led-on);
+}
+
+/* ── Preset bar ────────────────────────── */
+.preset-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: #10101a;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.preset-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  margin-right: 4px;
+}
+
+.preset-btn {
+  background: #1a1a28;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.preset-btn:hover {
+  color: var(--text);
+  border-color: #4a4a60;
+}
+
+.preset-btn.active {
+  background: #1a2a1a;
+  color: var(--led-on);
+  border-color: var(--led-on);
+  box-shadow: 0 0 8px var(--led-glow);
+}
+
+/* ── Main area ─────────────────────────── */
+.app-main {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Step grid ─────────────────────────── */
+.step-grid {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.step-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 6px;
+  background: #1a1a25;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-width: 62px;
+  transition: border-color 0.1s, box-shadow 0.1s;
+}
+
+.step-cell.step-playing {
+  border-color: var(--led-on);
+  box-shadow: 0 0 12px var(--led-glow), inset 0 0 8px var(--playing-glow);
+}
+
+.step-cell.step-off {
+  opacity: 0.5;
+}
+
+.step-num {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* Note picker */
+.note-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.note-lcd {
+  font-size: 0.7rem;
+  color: var(--lcd-text);
+  text-shadow: 0 0 5px var(--led-on);
+  background: var(--lcd);
+  border: 1px solid #1a3a1a;
+  border-radius: 3px;
+  padding: 2px 5px;
+  min-width: 34px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.step-off .note-lcd {
+  color: #1a3a1a;
+  text-shadow: none;
+}
+
+.note-dots {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.note-dot {
+  height: 12px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.08s, box-shadow 0.08s;
+}
+
+.note-dot-nat {
+  width: 22px;
+  background: #1c2e1c;
+  margin-left: 0;
+}
+
+.note-dot-sharp {
+  width: 15px;
+  background: #101810;
+  margin-left: 7px;
+}
+
+.note-dot-c {
+  margin-top: 4px;
+}
+
+.note-dot:hover:not(:disabled) {
+  background: #2e5a2e;
+}
+
+.note-dot-sel {
+  background: var(--led-on) !important;
+  box-shadow: 0 0 5px var(--led-glow);
+}
+
+.step-off .note-dot {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* Accent / Slide buttons */
+.step-flags {
+  display: flex;
+  gap: 3px;
+}
+
+.flag-btn {
+  width: 22px;
+  height: 18px;
+  font-family: inherit;
+  font-size: 0.6rem;
+  font-weight: bold;
+  border-radius: 3px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.accent-btn {
+  background: var(--accent-off);
+  color: #552200;
+  border-color: #3a1500;
+}
+
+.accent-btn.flag-on {
+  background: var(--accent-on);
+  color: #fff;
+  border-color: #ff6600;
+  box-shadow: 0 0 6px #ff440066;
+}
+
+.slide-btn {
+  background: var(--slide-off);
+  color: #553300;
+  border-color: #3a2200;
+}
+
+.slide-btn.flag-on {
+  background: var(--slide-on);
+  color: #000;
+  border-color: #ffcc00;
+  box-shadow: 0 0 6px #ffaa0066;
+}
+
+/* Step LED (active toggle) */
+.step-led {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: all 0.1s;
+  background: var(--led-off);
+}
+
+.step-on .step-led {
+  background: var(--led-on);
+  border-color: var(--led-on);
+  box-shadow: 0 0 8px var(--led-on);
+}
+
+/* ── Bottom row ────────────────────────── */
+.bottom-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ── Controls ──────────────────────────── */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Play button */
+.play-btn {
+  background: #0a1f0a;
+  color: var(--led-on);
+  border: 1px solid var(--led-on);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.play-btn:hover {
+  background: #0d2e0d;
+  box-shadow: 0 0 10px var(--led-glow);
+}
+
+.play-btn.playing {
+  background: #1a0a0a;
+  color: var(--accent-on);
+  border-color: var(--accent-on);
+  box-shadow: 0 0 12px #ff440044;
+}
+
+/* Knobs */
+.knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 70px;
+}
+
+.knob-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+}
+
+.knob input[type=range] {
+  width: 70px;
+  accent-color: var(--led-on);
+  cursor: pointer;
+}
+
+.knob-val {
+  font-size: 0.7rem;
+  color: var(--lcd-text);
+  text-shadow: 0 0 5px var(--led-on);
+  min-width: 50px;
+  text-align: center;
+}
+
+/* New Pattern button */
+.new-btn {
+  background: #10101e;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.new-btn:hover {
+  color: var(--text);
+  border-color: #4a4a60;
+}
+
+/* ── FX Panel ──────────────────────────── */
+.fx-panel {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: #10101a;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.fx-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #15151f;
+  border: 1px solid #222233;
+  border-radius: 6px;
+}
+
+.fx-section-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.fx-knobs {
+  display: flex;
+  gap: 12px;
+}
+
+/* ── Scrollbar ─────────────────────────── */
+.step-grid::-webkit-scrollbar { height: 4px; }
+.step-grid::-webkit-scrollbar-track { background: #0a0a10; }
+.step-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
