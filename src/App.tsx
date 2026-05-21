@@ -26,20 +26,28 @@ export default function App() {
     engineRef.current?.setFx(fxData);
   }, [fxData]);
 
+  const getOrCreateEngine = () => {
+    if (!engineRef.current) {
+      const engine = new TB303Engine(pattern, fxData);
+      engine.setOnStep(step => setCurrentStep(step));
+      engineRef.current = engine;
+    }
+    return engineRef.current;
+  };
+
+  const handlePreviewNote = (midi: number) => {
+    getOrCreateEngine().previewNote(midi);
+  };
+
   const handleTogglePlay = async () => {
     if (isPlaying) {
       engineRef.current?.stop();
       setIsPlaying(false);
       setCurrentStep(-1);
     } else {
-      if (!engineRef.current) {
-        const engine = new TB303Engine(pattern, fxData);
-        engine.setOnStep(step => setCurrentStep(step));
-        engineRef.current = engine;
-      } else {
-        engineRef.current.setOnStep(step => setCurrentStep(step));
-      }
-      await engineRef.current.start();
+      const engine = getOrCreateEngine();
+      engine.setOnStep(step => setCurrentStep(step));
+      await engine.start();
       setIsPlaying(true);
     }
   };
@@ -64,6 +72,7 @@ export default function App() {
           pattern={pattern}
           currentStep={currentStep}
           onChange={setPattern}
+          onPreviewNote={handlePreviewNote}
         />
         <div className="bottom-row">
           <Controls
