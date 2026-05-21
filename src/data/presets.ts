@@ -28,10 +28,14 @@ export interface Step {
 export interface PatternData {
   name: string;
   bpm: number;
+  tune: number;        // semitones, -12–+12
+  volume: number;      // 0–1
+  waveform: 'sawtooth' | 'square';
   resonance: number;   // 0–4
   cutoffBase: number;  // Hz
   envAmount: number;   // Hz
   decay: number;       // seconds
+  accentLevel: number; // 0–1
   steps: Step[];
 }
 
@@ -49,7 +53,7 @@ export function midiToFreq(midi: number): number {
 // MIDI range for note select: E1(28) to G3(55)
 export const MIDI_RANGE = Array.from({ length: 55 - 28 + 1 }, (_, i) => 28 + i);
 
-type RawStep = [number | null, boolean, boolean];
+type RawStep = [number | null, boolean, boolean, boolean?];
 
 function fromRaw(
   raw: RawStep[],
@@ -59,11 +63,15 @@ function fromRaw(
   cutoffBase: number,
   envAmount: number,
   decay: number,
+  tune = 0,
+  volume = 0.75,
+  waveform: 'sawtooth' | 'square' = 'sawtooth',
+  accentLevel = 1.0,
 ): PatternData {
   return {
-    name, bpm, resonance, cutoffBase, envAmount, decay,
-    steps: raw.slice(0, 16).map(([note, accent, slide]) => ({
-      active: note !== null,
+    name, bpm, tune, volume, waveform, resonance, cutoffBase, envAmount, decay, accentLevel,
+    steps: raw.slice(0, 16).map(([note, accent, slide, active]) => ({
+      active: active ?? note !== null,
       note: note ?? 33,
       accent,
       slide,
@@ -127,16 +135,27 @@ export const PRESETS: PatternData[] = [
     [45, true,  true],  [47,   false, false], [45, true,  false], [40,  false, true],
     [43, false, false], [45,   true,  false], [43, false, true],  [45,  false, false],
   ], 'Denki Flashback', 138, 3.5, 120, 4500, 0.28),
+
+  fromRaw([
+    [36, false, false], [48, false, false, false], [48, true,  false], [39, false, false],
+    [40, false, false], [39, false, false],        [40, false, false], [39, false, false],
+    [40, true,  false], [39, false, false],        [40, false, false], [36, false, false],
+    [40, false, false], [40, false, false],        [36, false, false], [36, false, false],
+  ], 'Denki Popcorn', 134, 0, 20, 5900, 0.25, 0, 0.75, 'sawtooth', 1.0),
 ];
 
 export function emptyPattern(): PatternData {
   return {
     name: 'User',
     bpm: 120,
+    tune: 0,
+    volume: 0.75,
+    waveform: 'sawtooth',
     resonance: 3.0,
     cutoffBase: 100,
     envAmount: 4000,
     decay: 0.4,
+    accentLevel: 1.0,
     steps: Array.from({ length: 16 }, (_, i) => ({
       active: i % 4 === 0,
       note: 33,

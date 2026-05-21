@@ -54,6 +54,31 @@ export function Controls({ pattern, isPlaying, onTogglePlay, onChange }: Props) 
         onChange={v => set({ bpm: v })}
       />
       <Knob
+        label="TUNE"
+        value={pattern.tune}
+        min={-12} max={12} step={0.5}
+        display={`${pattern.tune > 0 ? '+' : ''}${pattern.tune.toFixed(1)}`}
+        onChange={v => set({ tune: v })}
+      />
+      <Knob
+        label="VOL"
+        value={pattern.volume}
+        min={0} max={1} step={0.01}
+        display={`${Math.round(pattern.volume * 100)}%`}
+        onChange={v => set({ volume: v })}
+      />
+
+      <label className="knob">
+        <span className="knob-label">WAVE</span>
+        <button
+          className="wave-btn"
+          onClick={() => set({ waveform: pattern.waveform === 'sawtooth' ? 'square' : 'sawtooth' })}
+        >
+          {pattern.waveform === 'sawtooth' ? 'SAW' : 'SQR'}
+        </button>
+      </label>
+
+      <Knob
         label="RES"
         value={pattern.resonance}
         min={0} max={4} step={0.05}
@@ -80,6 +105,13 @@ export function Controls({ pattern, isPlaying, onTogglePlay, onChange }: Props) 
         min={0.05} max={2} step={0.05}
         display={`${pattern.decay.toFixed(2)}s`}
         onChange={v => set({ decay: v })}
+      />
+      <Knob
+        label="ACCENT"
+        value={pattern.accentLevel}
+        min={0} max={1} step={0.05}
+        display={`${Math.round(pattern.accentLevel * 100)}%`}
+        onChange={v => set({ accentLevel: v })}
       />
     </div>
   );

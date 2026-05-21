@@ -7,9 +7,10 @@ interface StepCellProps {
   index: number;
   isCurrent: boolean;
   onChange: (s: Step) => void;
+  onPreviewNote?: (midi: number) => void;
 }
 
-function StepCell({ step, index, isCurrent, onChange }: StepCellProps) {
+function StepCell({ step, index, isCurrent, onChange, onPreviewNote }: StepCellProps) {
   const set = (partial: Partial<Step>) => onChange({ ...step, ...partial });
 
   return (
@@ -32,7 +33,7 @@ function StepCell({ step, index, isCurrent, onChange }: StepCellProps) {
                   step.note === m ? 'note-dot-sel' : '',
                 ].filter(Boolean).join(' ')}
                 disabled={!step.active}
-                onClick={() => set({ note: m })}
+                onClick={() => { set({ note: m }); onPreviewNote?.(m); }}
                 title={midiToName(m)}
               />
             );
@@ -66,9 +67,10 @@ interface Props {
   pattern: PatternData;
   currentStep: number;
   onChange: (p: PatternData) => void;
+  onPreviewNote?: (midi: number) => void;
 }
 
-export function StepGrid({ pattern, currentStep, onChange }: Props) {
+export function StepGrid({ pattern, currentStep, onChange, onPreviewNote }: Props) {
   const updateStep = (i: number, s: Step) => {
     const steps = pattern.steps.map((st, idx) => idx === i ? s : st);
     onChange({ ...pattern, steps });
@@ -83,6 +85,7 @@ export function StepGrid({ pattern, currentStep, onChange }: Props) {
           index={i}
           isCurrent={currentStep === i}
           onChange={s => updateStep(i, s)}
+          onPreviewNote={onPreviewNote}
         />
       ))}
     </div>

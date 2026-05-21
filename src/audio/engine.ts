@@ -16,6 +16,8 @@ export class TB303Engine {
   private filter2: BiquadFilterNode | null = null;
   private vca: GainNode | null = null;
 
+  private outGain: GainNode | null = null;
+
   private delay: DelayNode | null = null;
   private delayFeedbackGain: GainNode | null = null;
   private delayWetGain: GainNode | null = null;
@@ -43,6 +45,9 @@ export class TB303Engine {
 
   setPattern(p: PatternData) {
     this.pattern = { ...p };
+    if (!this.ctx) return;
+    this.osc!.type = p.waveform;
+    this.outGain!.gain.value = p.volume;
   }
 
   setFx(fx: FxData) {
@@ -64,6 +69,40 @@ export class TB303Engine {
 
   setOnStep(cb: (step: number) => void) {
     this.onStep = cb;
+  }
+
+  async previewNote(midi: number) {
+    if (!this.ctx) {
+      this.ctx = new AudioContext();
+      this.buildGraph();
+    }
+    if (this.ctx.state === 'suspended') await this.ctx.resume();
+
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const freq = midiToFreq(midi) * Math.pow(2, this.pattern.tune / 12);
+
+    const osc = ctx.createOscillator();
+    osc.type = this.pattern.waveform;
+    osc.frequency.value = freq;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(this.pattern.cutoffBase + this.pattern.envAmount, now);
+    filter.frequency.setTargetAtTime(this.pattern.cutoffBase, now, 0.08);
+    filter.Q.value = this.pattern.resonance * 8;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.7 * this.pattern.volume, now + 0.003);
+    gain.gain.setTargetAtTime(0, now + 0.003, 0.08);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.5);
   }
 
   async start() {
@@ -112,7 +151,7 @@ export class TB303Engine {
     const ctx = this.ctx!;
 
     this.osc = ctx.createOscillator();
-    this.osc.type = 'sawtooth';
+    this.osc.type = this.pattern.waveform;
     this.osc.frequency.value = 110;
 
     // Two cascaded biquad LP filters = 4-pole, -24dB/oct (Moog-like slope)
@@ -130,13 +169,17 @@ export class TB303Engine {
     this.vca = ctx.createGain();
     this.vca.gain.value = 0;
 
-    const outGain = ctx.createGain();
-    outGain.gain.value = 0.75;
+    this.outGain = ctx.createGain();
+    this.outGain.gain.value = this.pattern.volume;
+    const outGain = this.outGain;
 
+    // Diode-ladder approximation: saturation inside the filter path
+    // filter1 (resonant) → shaper (in-filter nonlinearity) → filter2 (cleanup, 2x cutoff)
+    // Combined slope ≈ 18dB/oct in the musically critical band
     this.osc.connect(this.filter1);
-    this.filter1.connect(this.filter2);
-    this.filter2.connect(shaper);
-    shaper.connect(this.vca);
+    this.filter1.connect(shaper);
+    shaper.connect(this.filter2);
+    this.filter2.connect(this.vca);
     this.vca.connect(outGain);
     outGain.connect(ctx.destination);
 
@@ -211,9 +254,9 @@ export class TB303Engine {
       return;
     }
 
-    const { resonance, cutoffBase, envAmount, decay } = this.pattern;
+    const { resonance, cutoffBase, envAmount, decay, tune, accentLevel } = this.pattern;
     const accent = step.accent;
-    const freq = midiToFreq(step.note);
+    const freq = midiToFreq(step.note) * Math.pow(2, tune / 12);
 
     // --- Oscillator frequency ---
     if (hasSlide) {
@@ -225,24 +268,28 @@ export class TB303Engine {
     }
 
     // --- Filter envelope ---
-    const fDecay = accent ? 0.18 : decay;
-    const fAmount = accent ? envAmount * 1.4 : envAmount;
-    const q = accent ? Math.min(resonance + 0.5, 3.95) * 8 : resonance * 8;
+    // Accent decay much shorter for TB-303-style punch
+    const fDecay = accent ? 0.05 : decay;
+    const fAmount = accent ? envAmount * (1 + 0.4 * accentLevel) : envAmount;
+    const q = accent ? Math.min(resonance + 0.5 * accentLevel, 3.95) * 8 : resonance * 8;
     const sr = ctx.sampleRate;
     const cutoffPeak = Math.min(cutoffBase + fAmount, sr / 2 - 100);
     const cutoffMin = Math.max(cutoffBase, 30);
+    // filter2 tracks at 2x cutoff → combined slope ≈ 18dB/oct
+    const cutoffPeak2 = Math.min(cutoffPeak * 2, sr / 2 - 100);
+    const cutoffMin2 = Math.min(cutoffMin * 2, sr / 2 - 100);
 
     if (!hasSlide) {
       this.filter1!.frequency.setValueAtTime(cutoffPeak, time);
-      this.filter2!.frequency.setValueAtTime(cutoffPeak, time);
+      this.filter2!.frequency.setValueAtTime(cutoffPeak2, time);
     }
     this.filter1!.frequency.setTargetAtTime(cutoffMin, time, fDecay);
-    this.filter2!.frequency.setTargetAtTime(cutoffMin, time, fDecay);
+    this.filter2!.frequency.setTargetAtTime(cutoffMin2, time, fDecay);
     this.filter1!.Q.setValueAtTime(Math.max(0.5, q), time);
 
     // --- VCA envelope ---
     const ampDecay = accent ? stepDur * 1.2 : stepDur * 0.6;
-    const ampPeak = accent ? 1.4 : 1.0;
+    const ampPeak = accent ? 1.0 + 0.4 * accentLevel : 1.0;
 
     if (!hasSlide) {
       this.vca!.gain.setValueAtTime(0, time);

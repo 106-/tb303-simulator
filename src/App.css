@@ -345,6 +345,27 @@ body {
   text-align: center;
 }
 
+/* Wave selector button */
+.wave-btn {
+  background: #1a1a28;
+  color: var(--lcd-text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-shadow: 0 0 5px var(--led-on);
+  min-width: 50px;
+}
+
+.wave-btn:hover {
+  border-color: var(--led-on);
+  box-shadow: 0 0 6px var(--led-glow);
+}
+
 /* New Pattern button */
 .new-btn {
   background: #10101e;
