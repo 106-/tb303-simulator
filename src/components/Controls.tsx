@@ -81,7 +81,7 @@ export function Controls({ pattern, isPlaying, onTogglePlay, onChange }: Props) 
       <Knob
         label="RES"
         value={pattern.resonance}
-        min={0} max={4} step={0.05}
+        min={0} max={5} step={0.05}
         display={pattern.resonance.toFixed(2)}
         onChange={v => set({ resonance: v })}
       />
